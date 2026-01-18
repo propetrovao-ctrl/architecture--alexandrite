@@ -1,0 +1,72 @@
+@startuml
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam lifelineStrategy solid
+skinparam maxMessageSize 60
+
+title Диаграмма последовательности операций кеширования
+
+== Чтение списка заказов (данные в кеше) ==
+
+actor "Оператор" as Operator
+participant "MES Frontend" as Frontend
+participant "MES API" as API
+participant "Redis" as Redis
+
+Operator -> Frontend: Запрос списка
+activate Frontend
+Frontend -> API: Получить заказы
+activate API
+API -> Redis: Проверить кеш
+activate Redis
+Redis --> API: Данные найдены
+deactivate Redis
+API --> Frontend: Список заказов
+deactivate API
+Frontend --> Operator: Показать список
+deactivate Frontend
+
+== Чтение списка заказов (данных нет в кеше) ==
+
+Operator -> Frontend: Запрос списка
+activate Frontend
+Frontend -> API: Получить заказы
+activate API
+API -> Redis: Проверить кеш
+activate Redis
+Redis --> API: Данных нет
+deactivate Redis
+API -> DB: Запрос к базе
+activate DB
+DB --> API: Список заказов
+deactivate DB
+API -> Redis: Сохранить в кеш
+activate Redis
+deactivate Redis
+API --> Frontend: Список заказов
+deactivate API
+Frontend --> Operator: Показать список
+deactivate Frontend
+
+== Изменение статуса заказа ==
+
+participant "MES DB" as DB
+
+Operator -> Frontend: Изменить статус
+activate Frontend
+Frontend -> API: Обновить статус
+activate API
+API -> DB: Обновить в базе
+activate DB
+DB --> API: Готово
+deactivate DB
+API -> Redis: Удалить из кеша
+note right: инвалидация
+activate Redis
+deactivate Redis
+API --> Frontend: Готово
+deactivate API
+Frontend --> Operator: Обновить экран
+deactivate Frontend
+
+@enduml
